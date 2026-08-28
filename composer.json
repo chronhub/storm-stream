@@ -1,0 +1,32 @@
+{
+    "name": "chronhub/storm-stream",
+    "description": "Stream and StreamName — the validated, immutable appended unit of the Storm event store",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["ddd", "event-sourcing", "stream", "cqrs"],
+    "require": {
+        "php": ">=8.5",
+        "chronhub/storm-contracts": "self.version",
+        "chronhub/storm-message": "self.version",
+        "symfony/string": "^8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.3.0",
+        "phpstan/phpstan": "^2.2.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Storm\\Stream\\": "./"
+        },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Storm\\Stream\\Tests\\": "Tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
