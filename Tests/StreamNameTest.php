@@ -14,6 +14,54 @@ use Storm\Stream\StreamName;
 
 final class StreamNameTest extends TestCase
 {
+    #[Test]
+    #[DataProvider('qualifier_entry_points')]
+    public function refuses_a_non_canonical_qualifier_instead_of_composing_it(bool $bound): void
+    {
+        $this->expectException(InvalidStreamException::class);
+        $bound ? new StreamName('order')->withQualifier("e\u{0301}") : new StreamName("order-e\u{0301}");
+    }
+
+    #[Test]
+    #[DataProvider('qualifier_edges')]
+    public function refuses_edge_whitespace_and_control_in_a_bound_qualifier(string $qualifier, bool $bound): void
+    {
+        $this->expectException(InvalidStreamException::class);
+        $bound ? new StreamName('order')->withQualifier($qualifier) : new StreamName('order-'.$qualifier);
+    }
+
+    #[Test]
+    #[DataProvider('qualifier_entry_points')]
+    public function preserves_canonical_qualifier_bytes_and_category_normalization(bool $bound): void
+    {
+        $name = $bound ? new StreamName(' ORDER ')->withQualifier('É-AbC') : new StreamName(' ORDER -É-AbC');
+        $this->assertSame('order', $name->category);
+        $this->assertSame('É-AbC', $name->qualifier);
+        $this->assertSame('order-É-AbC', $name->toString());
+    }
+
+    /**
+     * @return iterable<string, array{bool}>
+     */
+    public static function qualifier_entry_points(): iterable
+    {
+        yield 'constructor' => [false];
+        yield 'bound' => [true];
+    }
+
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function qualifier_edges(): iterable
+    {
+        foreach ([' ', "\0", "\n", "\u{FEFF}", "\u{00A0}"] as $edge) {
+            foreach ([false, true] as $bound) {
+                yield bin2hex($edge).'-head-'.(int) $bound => [$edge.'id', $bound];
+                yield bin2hex($edge).'-tail-'.(int) $bound => ['id'.$edge, $bound];
+            }
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Category only, no qualifier
     // -------------------------------------------------------------------------

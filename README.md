@@ -186,3 +186,16 @@ the architecture gates and the full internal documentation live.
 
 *Pre-version: this package changes without deprecation cycles — pin a commit if you need
 stability, expect resets rather than migrations until the first tagged version.*
+
+## Qualifier input compatibility
+
+A qualifier must already use Unicode NFC. `StreamName` rejects qualifiers whose bytes would
+change under Unicode normalization or trimming, through both the constructor and
+`withQualifier()`. Category normalization remains unchanged. Valid NFC qualifiers preserve their
+bytes and case.
+
+Callers that supplied decomposed Unicode or padded identifiers must correct their input handling.
+Those inputs raise `InvalidStreamException` instead of silently addressing a normalized stream.
+If a domain chooses to normalize identifiers, do so at its identity boundary before creating
+message headers or selecting a stream. Do not rename stored streams to decomposed forms: names
+written through `StreamName` already used NFC, and a new spelling could split an existing history.

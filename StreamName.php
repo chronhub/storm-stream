@@ -23,6 +23,9 @@ use function Symfony\Component\String\u;
  * `order-abc` are two distinct streams with independent heads, so an application rendering one id
  * in two casings mints two histories with no error at any layer.
  *
+ * Qualifiers must already be NFC and contain no whitespace or control characters. Inputs that
+ * normalization would change are refused, so identity bytes are never silently rewritten.
+ *
  * A value object: validated in the constructor, immutable, and string-convertible. Builders that
  * hold a category and later bind an id use `withQualifier()`.
  *
@@ -81,7 +84,17 @@ final readonly class StreamName implements Stringable
      */
     public function __construct(string $value)
     {
+        $rawValue = $value;
         $value = self::normalized($value);
+        $rawDelimiter = strpos($rawValue, self::DELIM);
+
+        if ($rawDelimiter !== false) {
+            $rawQualifier = substr($rawValue, $rawDelimiter + 1);
+
+            if ($rawQualifier !== self::normalized($rawQualifier)) {
+                throw InvalidStreamException::invalidQualifier($rawQualifier);
+            }
+        }
 
         if (strlen($value) > self::MAX_BYTES) {
             throw InvalidStreamException::tooLong(strlen($value), self::MAX_BYTES);
@@ -141,7 +154,7 @@ final readonly class StreamName implements Stringable
         // deliberately NOT re-trimmed: eating the space of "order- abc" would converge it with
         // "order-abc" silently, the identity drift this class refuses everywhere else; the padded
         // form falls to the regex's whitespace refusal instead. Encoding is already proven, the
-        // constructor normalized the full value.
+        // constructor checked that normalization leaves the raw qualifier unchanged.
         if ($qualifier === '' || ! preg_match(self::QUALIFIER_REGEX, $qualifier)) {
             throw InvalidStreamException::invalidQualifier($qualifier);
         }

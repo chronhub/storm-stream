@@ -31,7 +31,7 @@ final class InvalidStreamException extends InvalidArgumentException implements I
     public static function invalidQualifier(string $qualifier): self
     {
         return new self(
-            sprintf("Invalid stream qualifier '%s': no whitespace, no control or format characters, no leading/trailing/doubled dash.", self::printable($qualifier)),
+            sprintf("Invalid stream qualifier '%s': must already be NFC; no whitespace, no control or format characters, no leading/trailing/doubled dash.", self::printable($qualifier)),
         );
     }
 
