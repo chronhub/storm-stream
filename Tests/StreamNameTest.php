@@ -31,6 +31,29 @@ final class StreamNameTest extends TestCase
     }
 
     #[Test]
+    public function names_the_qualifier_without_its_delimiter_when_refusing_it(): void
+    {
+        // the refusal quotes what follows the first delimiter, never the delimiter itself
+        $this->expectException(InvalidStreamException::class);
+        $this->expectExceptionMessage("Invalid stream qualifier 'id '");
+
+        new StreamName('order-id ');
+    }
+
+    #[Test]
+    public function a_refusal_message_never_carries_raw_format_characters(): void
+    {
+        // U+202E reverses the reading direction of everything after it in a terminal or a log line
+        try {
+            new StreamName("order-id\u{202E}x");
+            $this->fail('expected InvalidStreamException');
+        } catch (InvalidStreamException $e) {
+            $this->assertStringNotContainsString("\u{202E}", $e->getMessage());
+            $this->assertStringContainsString('\u{202E}', $e->getMessage());
+        }
+    }
+
+    #[Test]
     #[DataProvider('qualifier_entry_points')]
     public function preserves_canonical_qualifier_bytes_and_category_normalization(bool $bound): void
     {
@@ -374,13 +397,12 @@ final class StreamNameTest extends TestCase
     #[Test]
     public function refuses_invalid_utf8_through_the_contract_not_a_symfony_exception(): void
     {
-        // u() throws Symfony's own exception on invalid UTF-8; a consumer depending on Contracts
-        // alone could not catch every invalid input; the boundary translates, cause preserved
+        // a consumer depending on Contracts alone catches every invalid input through the package's
+        // own exception; the message echoes the bytes in hexadecimal, never raw
         try {
             new StreamName("order-\xC3\x28");
             $this->fail('invalid UTF-8 must be refused');
         } catch (InvalidStreamException $e) {
-            $this->assertNotNull($e->getPrevious(), 'the Symfony cause is preserved');
             $this->assertStringNotContainsString("\xC3\x28", $e->getMessage(), 'raw bytes never reach the message');
         }
     }
@@ -473,5 +495,19 @@ final class StreamNameTest extends TestCase
         $this->expectException(InvalidStreamException::class);
 
         new StreamName('order- abc');
+    }
+
+    #[Test]
+    public function invalid_utf8_is_refused_without_symfony_string_on_the_path(): void
+    {
+        try {
+            new StreamName("order-\xC3\x28");
+            self::fail('expected InvalidStreamException');
+        } catch (InvalidStreamException $e) {
+            for ($cause = $e->getPrevious(); $cause !== null; $cause = $cause->getPrevious()) {
+                self::assertStringStartsNotWith('Symfony\\', $cause::class, 'the encoding boundary is the package\'s own');
+            }
+            self::assertStringContainsString('hex 6f726465722dc328', $e->getMessage());
+        }
     }
 }

@@ -8,11 +8,11 @@
         "php": ">=8.5",
         "chronhub/storm-contracts": "self.version",
         "chronhub/storm-message": "self.version",
-        "symfony/string": "^8.1"
+        "chronhub/storm-support": "self.version"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.3.0",
-        "phpstan/phpstan": "^2.2.8"
+        "phpunit/phpunit": "^13.4.0",
+        "phpstan/phpstan": "^2.2.16"
     },
     "autoload": {
         "psr-4": {

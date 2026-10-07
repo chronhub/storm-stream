@@ -6,10 +6,8 @@ namespace Storm\Stream;
 
 use Override;
 use Storm\Stream\Exception\InvalidStreamException;
+use Storm\Support\Text\Str;
 use Stringable;
-use Symfony\Component\String\Exception\InvalidArgumentException as StringEncodingException;
-
-use function Symfony\Component\String\u;
 
 /**
  * The identity of a stream, parsed and validated as either category or category-qualifier.
@@ -167,30 +165,24 @@ final readonly class StreamName implements Stringable
      */
     private function assertCategory(string $category): string
     {
-        $category = self::normalized($category, lower: true);
-
-        if ($category === '' || ! preg_match(self::CATEGORY_REGEX, $category)) {
-            throw InvalidStreamException::invalidCategory($category);
-        }
-
-        return $category;
+        return new StreamCategory($category)->value;
     }
 
     /**
-     * The encoding boundary: `u()` throws Symfony's own exception on invalid UTF-8, which would
-     * escape the package's contracted surface; a consumer depending on `Contracts` alone could not
-     * catch every invalid input the constructor documents. Translated here, cause preserved.
+     * The encoding boundary: a value that is not well-formed UTF-8 is refused here, before any
+     * multibyte operation reads it, through the exception the package contracts. What passes is
+     * composed to NFC, then trimmed, so a decomposed accent never survives into a stored name.
      *
      * @throws InvalidStreamException when the value is not valid UTF-8
      */
     private static function normalized(string $value, bool $lower = false): string
     {
-        try {
-            $unicode = u($value)->trim();
-
-            return ($lower ? $unicode->lower() : $unicode)->toString();
-        } catch (StringEncodingException $e) {
-            throw InvalidStreamException::invalidEncoding($value, $e);
+        if (! Str::isWellFormed($value)) {
+            throw InvalidStreamException::invalidEncoding($value);
         }
+
+        $trimmed = $value |> Str::canonical(...) |> Str::trim(...);
+
+        return $lower ? Str::lower($trimmed) : $trimmed;
     }
 }
